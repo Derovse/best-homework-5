@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Invaders</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+        }
+
+        #gameContainer {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        #gameCanvas {
+            border: 3px solid #0f0;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+            background: #000;
+        }
+
+        #ui {
+            display: flex;
+            justify-content: space-between;
+            width: 800px;
+            color: #0f0;
+            font-size: 20px;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.7);
+        }
+
+        #superAbility {
+            position: relative;
+            width: 60px;
+            height: 60px;
+            border: 3px solid #0ff;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: bold;
+            color: #0ff;
+            text-shadow: 0 0 15px rgba(0, 255, 255, 0.8);
+            background: rgba(0, 255, 255, 0.1);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+
+        #superAbility.ready {
+            border-color: #0f0;
+            color: #0f0;
+            text-shadow: 0 0 15px rgba(0, 255, 0, 0.8);
+            background: rgba(0, 255, 0, 0.1);
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+            animation: pulse 1s infinite;
+        }
+
+        #superAbility.active {
+            border-color: #ff0;
+            color: #ff0;
+            text-shadow: 0 0 15px rgba(255, 255, 0, 0.8);
+            background: rgba(255, 255, 0, 0.2);
+            box-shadow: 0 0 30px rgba(255, 255, 0, 0.8);
+            animation: activeGlow 0.3s infinite;
+        }
+
+        #shieldAbility {
+            position: relative;
+            width: 60px;
+            height: 60px;
+            border: 3px solid #0ff;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: bold;
+            color: #0ff;
+            text-shadow: 0 0 15px rgba(0, 255, 255, 0.8);
+            background: rgba(0, 255, 255, 0.1);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+
+        #shieldAbility.ready {
+            border-color: #00f;
+            color: #00f;
+            text-shadow: 0 0 15px rgba(0, 0, 255, 0.8);
+            background: rgba(0, 0, 255, 0.1);
+            box-shadow: 0 0 20px rgba(0, 0, 255, 0.5);
+            animation: pulse 1s infinite;
+        }
+
+        #shieldAbility.active {
+            border-color: #0ff;
+            color: #0ff;
+            text-shadow: 0 0 15px rgba(0, 255, 255, 0.8);
+            background: rgba(0, 255, 255, 0.3);
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.8);
+            animation: activeGlow 0.3s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes activeGlow {
+            0%, 100% { box-shadow: 0 0 30px rgba(255, 255, 0, 0.8); }
+            50% { box-shadow: 0 0 50px rgba(255, 255, 0, 1); }
+        }
+
+        #cooldownOverlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            transition: height 0.1s linear;
+            border-radius: 0 0 7px 7px;
+        }
+
+        #cooldownText {
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 14px;
+            color: #0ff;
+            white-space: nowrap;
+        }
+
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border: 3px solid #f00;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.7);
+        }
+
+        #gameOver h1 {
+            color: #f00;
+            font-size: 48px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px rgba(255, 0, 0, 0.8);
+        }
+
+        #gameOver p {
+            color: #0f0;
+            font-size: 24px;
+            margin: 10px 0;
+        }
+
+        #gameOver button {
+            margin-top: 20px;
+            padding: 15px 40px;
+            font-size: 20px;
+            background: #0f0;
+            border: none;
+            color: #000;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.7);
+        }
+
+        #gameOver button:hover {
+            background: #0ff;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.9);
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="ui">
+            <div>SCORE: <span id="score">0</span></div>
+            <div>HIGH SCORE: <span id="highScore">0</span></div>
+            <div>LIVES: <span id="lives">3</span></div>
+            <div style="display: flex; gap: 10px;">
+                <div id="superAbility" class="">
+                    Q
+                    <div id="cooldownOverlay"></div>
+                    <div id="cooldownText"></div>
+                </div>
+                <div id="shieldAbility" class="">
+                    E
+                    <div id="shieldCooldownOverlay" style="position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0, 0, 0, 0.7); transition: height 0.1s linear; border-radius: 0 0 7px 7px;"></div>
+                    <div id="shieldCooldownText" style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 14px; color: #0ff; white-space: nowrap;"></div>
+                </div>
+            </div>
+        </div>
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div id="gameOver">
+            <h1>GAME OVER</h1>
+            <p>FINAL SCORE: <span id="finalScore">0</span></p>
+            <p>HIGH SCORE: <span id="finalHighScore">0</span></p>
+            <button onclick="restartGame()">PRESS ENTER TO RESTART</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Game state
+        let gameState = 'playing';
+        let score = 0;
+        let lives = 3;
+        let highScore = localStorage.getItem('spaceInvadersHighScore') || 0;
+        
+        // Super ability state
+        let superAbilityActive = false;
+        let superAbilityCooldown = 0;
+        let superAbilityDuration = 0;
+        const SUPER_ABILITY_COOLDOWN = 30; // 30 seconds
+        const SUPER_ABILITY_DURATION = 1; // 1 second
+        
+        // Shield ability state
+        let shieldActive = false;
+        let shieldCooldown = 0;
+        let shieldDuration = 0;
+        const SHIELD_COOLDOWN = 30; // 30 seconds
+        const SHIELD_DURATION = 0.5; // 0.5 seconds
+        
+        let lastTime = Date.now();
+        
+        // Audio context for sound effects
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Sound effects
+        function playSound(frequency, duration, type = 'sine') {
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            oscillator.frequency.value = frequency;
+            oscillator.type = type;
+            
+            gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            
+            oscillator.start(audioCtx.currentTime);
+            oscillator.stop(audioCtx.currentTime + duration);
+        }
+        
+        // Star field background
+        class Star {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.speed = Math.random() * 2 + 0.5;
+                this.size = Math.random() * 2;
+            }
+            
+            update() {
+                this.y += this.speed;
+                if (this.y > canvas.height) {
+                    this.y = 0;
+                    this.x = Math.random() * canvas.width;
+                }
+            }
+            
+            draw() {
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+            }
+        }
+        
+        // Player class
+        class Player {
+            constructor() {
+                this.width = 40;
+                this.height = 30;
+                this.x = canvas.width / 2 - this.width / 2;
+                this.y = canvas.height - 60;
+                this.speed = 5;
+                this.shootCooldown = 0;
+            }
+            
+            update() {
+                if (keys['ArrowLeft'] || keys['a']) {
+                    this.x -= this.speed;
+                }
+                if (keys['ArrowRight'] || keys['d']) {
+                    this.x += this.speed;
+                }
+                
+                this.x = Math.max(0, Math.min(canvas.width - this.width, this.x));
+                
+                if (this.shootCooldown > 0) this.shootCooldown--;
+                
+                // Super ability: rapid fire
+                const shootDelay = superAbilityActive ? 3 : 20;
+                
+                if ((keys[' '] || keys['Spacebar']) && this.shootCooldown === 0) {
+                    this.shoot();
+                    this.shootCooldown = shootDelay;
+                }
+            }
+            
+            draw() {
+                // Glow effect when super ability is active
+                if (superAbilityActive) {
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = '#ff0';
+                }
+                
+                // Shield effect
+                if (shieldActive) {
+                    ctx.shadowBlur = 25;
+                    ctx.shadowColor = '#0ff';
+                    ctx.strokeStyle = '#0ff';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(this.x + this.width / 2, this.y + this.height / 2, 35, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.strokeStyle = '#00f';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(this.x + this.width / 2, this.y + this.height / 2, 30, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                
+                ctx.fillStyle = '#0f0';
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.width / 2, this.y);
+                ctx.lineTo(this.x, this.y + this.height);
+                ctx.lineTo(this.x + this.width, this.y + this.height);
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.fillStyle = superAbilityActive ? '#ff0' : '#0ff';
+                ctx.fillRect(this.x + 5, this.y + 15, 10, 5);
+                ctx.fillRect(this.x + this.width - 15, this.y + 15, 10, 5);
+                
+                ctx.shadowBlur = 0;
+            }
+            
+            shoot() {
+                playerBullets.push(new Bullet(this.x + this.width / 2 - 2, this.y, -8, '#ff0'));
+                playSound(800, 0.1, 'square');
+            }
+        }
+        
+        // Alien class
+        class Alien {
+            constructor(x, y, type) {
+                this.width = 30;
+                this.height = 25;
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.frame = 0;
+            }
+            
+            draw() {
+                ctx.fillStyle = '#f00';
+                
+                const offset = Math.sin(Date.now() / 500 + this.x) * 2;
+                
+                if (this.type === 0) {
+                    ctx.fillRect(this.x + 5, this.y, 20, 10);
+                    ctx.fillRect(this.x, this.y + 10, 30, 10);
+                    ctx.fillRect(this.x + 10 + offset, this.y + 20, 4, 5);
+                    ctx.fillRect(this.x + 16 + offset, this.y + 20, 4, 5);
+                } else if (this.type === 1) {
+                    ctx.fillRect(this.x + 10, this.y, 10, 5);
+                    ctx.fillRect(this.x + 5, this.y + 5, 20, 10);
+                    ctx.fillRect(this.x, this.y + 15, 30, 5);
+                    ctx.fillRect(this.x + 5 + offset, this.y + 20, 5, 5);
+                    ctx.fillRect(this.x + 20 + offset, this.y + 20, 5, 5);
+                } else {
+                    ctx.fillRect(this.x, this.y + 5, 30, 10);
+                    ctx.fillRect(this.x + 10, this.y, 10, 5);
+                    ctx.fillRect(this.x + 5, this.y + 15, 20, 5);
+                    ctx.fillRect(this.x + offset, this.y + 20, 10, 5);
+                    ctx.fillRect(this.x + 20 + offset, this.y + 20, 10, 5);
+                }
+            }
+        }
+        
+        // Bullet class
+        class Bullet {
+            constructor(x, y, speed, color) {
+                this.x = x;
+                this.y = y;
+                this.width = 4;
+                this.height = 15;
+                this.speed = speed;
+                this.color = color;
+            }
+            
+            update() {
+                this.y += this.speed;
+            }
+            
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                ctx.shadowBlur = 0;
+            }
+        }
+        
+        // Particle class for explosions
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = (Math.random() - 0.5) * 4;
+                this.life = 30;
+                this.size = Math.random() * 3 + 2;
+            }
+            
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life--;
+            }
+            
+            draw() {
+                ctx.fillStyle = `rgba(255, ${Math.floor(this.life * 8.5)}, 0, ${this.life / 30})`;
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+            }
+        }
+        
+        // Game objects
+        const stars = Array.from({ length: 100 }, () => new Star());
+        const player = new Player();
+        let aliens = [];
+        let playerBullets = [];
+        let alienBullets = [];
+        let particles = [];
+        
+        let alienDirection = 1;
+        let alienSpeed = 0.3;
+        let alienMoveDown = false;
+        
+        // Keyboard input
+        const keys = {};
+        
+        window.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+            if (e.key === 'Enter' && gameState === 'gameOver') {
+                restartGame();
+            }
+            // Support Q key on different keyboard layouts (EN, UA, RU)
+            if (gameState === 'playing' && (
+                e.key === 'q' || e.key === 'Q' || 
+                e.key === 'й' || e.key === 'Й' ||
+                e.code === 'KeyQ'
+            )) {
+                activateSuperAbility();
+            }
+            // Support E key on different keyboard layouts (EN, UA, RU)
+            if (gameState === 'playing' && (
+                e.key === 'e' || e.key === 'E' || 
+                e.key === 'у' || e.key === 'У' ||
+                e.code === 'KeyE'
+            )) {
+                activateShield();
+            }
+        });
+        
+        window.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+        
+        // Initialize aliens
+        function createAliens() {
+            aliens = [];
+            for (let row = 0; row < 3; row++) {
+                for (let col = 0; col < 6; col++) {
+                    const type = row === 0 ? 0 : row === 1 ? 1 : 2;
+                    aliens.push(new Alien(col * 80 + 150, row * 60 + 50, type));
+                }
+            }
+        }
+        
+        createAliens();
+        
+        // Activate super ability
+        function activateSuperAbility() {
+            if (superAbilityCooldown === 0 && !superAbilityActive) {
+                superAbilityActive = true;
+                superAbilityDuration = SUPER_ABILITY_DURATION;
+                lastTime = Date.now(); // Reset timer
+                playSound(600, 0.3, 'square');
+                updateSuperAbilityUI();
+            }
+        }
+        
+        // Activate shield
+        function activateShield() {
+            if (shieldCooldown === 0 && !shieldActive) {
+                shieldActive = true;
+                shieldDuration = SHIELD_DURATION;
+                playSound(800, 0.2, 'sine');
+                updateShieldUI();
+            }
+        }
+        
+        // Update super ability
+        function updateSuperAbility() {
+            const currentTime = Date.now();
+            const deltaTime = (currentTime - lastTime) / 1000; // Convert to seconds
+            lastTime = currentTime;
+            
+            if (superAbilityActive) {
+                superAbilityDuration -= deltaTime;
+                if (superAbilityDuration <= 0) {
+                    superAbilityActive = false;
+                    superAbilityCooldown = SUPER_ABILITY_COOLDOWN;
+                    playSound(400, 0.2, 'square');
+                }
+            }
+            
+            if (superAbilityCooldown > 0) {
+                superAbilityCooldown -= deltaTime;
+                if (superAbilityCooldown < 0) superAbilityCooldown = 0;
+            }
+            
+            // Update shield
+            if (shieldActive) {
+                shieldDuration -= deltaTime;
+                if (shieldDuration <= 0) {
+                    shieldActive = false;
+                    shieldCooldown = SHIELD_COOLDOWN;
+                    playSound(400, 0.15, 'sine');
+                }
+            }
+            
+            if (shieldCooldown > 0) {
+                shieldCooldown -= deltaTime;
+                if (shieldCooldown < 0) shieldCooldown = 0;
+            }
+            
+            updateSuperAbilityUI();
+            updateShieldUI();
+        }
+        
+        // Update super ability UI
+        function updateSuperAbilityUI() {
+            const abilityDiv = document.getElementById('superAbility');
+            const overlayDiv = document.getElementById('cooldownOverlay');
+            const textDiv = document.getElementById('cooldownText');
+            
+            if (superAbilityActive) {
+                abilityDiv.className = 'active';
+                const percent = (superAbilityDuration / SUPER_ABILITY_DURATION) * 100;
+                overlayDiv.style.height = (100 - percent) + '%';
+                textDiv.textContent = 'ACTIVE!';
+            } else if (superAbilityCooldown > 0) {
+                abilityDiv.className = '';
+                const percent = (superAbilityCooldown / SUPER_ABILITY_COOLDOWN) * 100;
+                overlayDiv.style.height = percent + '%';
+                const secondsLeft = Math.ceil(superAbilityCooldown);
+                textDiv.textContent = secondsLeft + 's';
+            } else {
+                abilityDiv.className = 'ready';
+                overlayDiv.style.height = '0%';
+                textDiv.textContent = 'READY';
+            }
+        }
+        
+        // Update shield UI
+        function updateShieldUI() {
+            const abilityDiv = document.getElementById('shieldAbility');
+            const overlayDiv = document.getElementById('shieldCooldownOverlay');
+            const textDiv = document.getElementById('shieldCooldownText');
+            
+            if (shieldActive) {
+                abilityDiv.className = 'active';
+                const percent = (shieldDuration / SHIELD_DURATION) * 100;
+                overlayDiv.style.height = (100 - percent) + '%';
+                textDiv.textContent = 'ACTIVE!';
+            } else if (shieldCooldown > 0) {
+                abilityDiv.className = '';
+                const percent = (shieldCooldown / SHIELD_COOLDOWN) * 100;
+                overlayDiv.style.height = percent + '%';
+                const secondsLeft = Math.ceil(shieldCooldown);
+                textDiv.textContent = secondsLeft + 's';
+            } else {
+                abilityDiv.className = 'ready';
+                overlayDiv.style.height = '0%';
+                textDiv.textContent = 'READY';
+            }
+        }
+        
+        // Update aliens
+        function updateAliens() {
+            let shouldMoveDown = false;
+            
+            for (let alien of aliens) {
+                alien.x += alienSpeed * alienDirection;
+                
+                if (alien.x <= 0 || alien.x >= canvas.width - alien.width) {
+                    shouldMoveDown = true;
+                }
+            }
+            
+            if (shouldMoveDown) {
+                alienDirection *= -1;
+                for (let alien of aliens) {
+                    alien.y += 20;
+                }
+            }
+            
+            // Alien shooting
+            if (Math.random() < 0.01 && aliens.length > 0) {
+                const shooter = aliens[Math.floor(Math.random() * aliens.length)];
+                alienBullets.push(new Bullet(shooter.x + shooter.width / 2 - 2, shooter.y + shooter.height, 5, '#f0f'));
+                playSound(200, 0.1, 'sawtooth');
+            }
+            
+            // Check if aliens reached bottom
+            for (let alien of aliens) {
+                if (alien.y + alien.height >= player.y) {
+                    endGame();
+                }
+            }
+            
+            // Increase speed as aliens die
+            alienSpeed = 0.3 + (18 - aliens.length) * 0.02;
+        }
+        
+        // Collision detection
+        function checkCollisions() {
+            // Player bullets vs aliens
+            for (let i = playerBullets.length - 1; i >= 0; i--) {
+                const bullet = playerBullets[i];
+                for (let j = aliens.length - 1; j >= 0; j--) {
+                    const alien = aliens[j];
+                    if (bullet.x < alien.x + alien.width &&
+                        bullet.x + bullet.width > alien.x &&
+                        bullet.y < alien.y + alien.height &&
+                        bullet.y + bullet.height > alien.y) {
+                        
+                        // Create explosion
+                        for (let k = 0; k < 15; k++) {
+                            particles.push(new Particle(alien.x + alien.width / 2, alien.y + alien.height / 2));
+                        }
+                        
+                        aliens.splice(j, 1);
+                        playerBullets.splice(i, 1);
+                        score += 10;
+                        playSound(150, 0.2, 'sawtooth');
+                        
+                        if (score > highScore) {
+                            highScore = score;
+                            localStorage.setItem('spaceInvadersHighScore', highScore);
+                        }
+                        
+                        if (aliens.length === 0) {
+                            createAliens();
+                        }
+                        break;
+                    }
+                }
+            }
+            
+            // Alien bullets vs player (with shield protection)
+            for (let i = alienBullets.length - 1; i >= 0; i--) {
+                const bullet = alienBullets[i];
+                if (bullet.x < player.x + player.width &&
+                    bullet.x + bullet.width > player.x &&
+                    bullet.y < player.y + player.height &&
+                    bullet.y + bullet.height > player.y) {
+                    
+                    alienBullets.splice(i, 1);
+                    
+                    // Shield blocks damage
+                    if (shieldActive) {
+                        playSound(1000, 0.1, 'sine');
+                        for (let k = 0; k < 10; k++) {
+                            particles.push(new Particle(bullet.x, bullet.y));
+                        }
+                    } else {
+                        lives--;
+                        playSound(100, 0.3, 'sawtooth');
+                        
+                        for (let k = 0; k < 20; k++) {
+                            particles.push(new Particle(player.x + player.width / 2, player.y + player.height / 2));
+                        }
+                        
+                        if (lives <= 0) {
+                            endGame();
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Update UI
+        function updateUI() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('highScore').textContent = highScore;
+            document.getElementById('lives').textContent = lives;
+        }
+        
+        // End game
+        function endGame() {
+            gameState = 'gameOver';
+            document.getElementById('gameOver').style.display = 'block';
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalHighScore').textContent = highScore;
+        }
+        
+        // Restart game
+        function restartGame() {
+            gameState = 'playing';
+            score = 0;
+            lives = 3;
+            playerBullets = [];
+            alienBullets = [];
+            particles = [];
+            player.x = canvas.width / 2 - player.width / 2;
+            createAliens();
+            alienDirection = 1;
+            alienSpeed = 0.3;
+            superAbilityActive = false;
+            superAbilityCooldown = 0;
+            superAbilityDuration = 0;
+            shieldActive = false;
+            shieldCooldown = 0;
+            shieldDuration = 0;
+            document.getElementById('gameOver').style.display = 'none';
+            updateSuperAbilityUI();
+            updateShieldUI();
+        }
+        
+        // Main game loop
+        function gameLoop() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw stars
+            stars.forEach(star => {
+                star.update();
+                star.draw();
+            });
+            
+            if (gameState === 'playing') {
+                // Update
+                player.update();
+                updateAliens();
+                updateSuperAbility();
+                
+                // Update bullets
+                playerBullets.forEach(bullet => bullet.update());
+                alienBullets.forEach(bullet => bullet.update());
+                
+                // Remove off-screen bullets
+                playerBullets = playerBullets.filter(b => b.y > 0);
+                alienBullets = alienBullets.filter(b => b.y < canvas.height);
+                
+                // Update particles
+                particles.forEach(p => p.update());
+                particles = particles.filter(p => p.life > 0);
+                
+                checkCollisions();
+                updateUI();
+                
+                // Draw
+                player.draw();
+                aliens.forEach(alien => alien.draw());
+                playerBullets.forEach(bullet => bullet.draw());
+                alienBullets.forEach(bullet => bullet.draw());
+                particles.forEach(p => p.draw());
+            }
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Start game
+        updateUI();
+        updateSuperAbilityUI();
+        updateShieldUI();
+        lastTime = Date.now();
+        gameLoop();
+    </script>
+</body>
+</html>
